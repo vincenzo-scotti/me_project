@@ -1,0 +1,3 @@
+[submodule "submodules/llm_cstk"]
+	path = submodules/llm_cstk
+	url = https://github.com/vincenzo-scotti/llm_cstk.git
