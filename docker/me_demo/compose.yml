@@ -1,0 +1,75 @@
+services:
+#  llm:
+#    build:
+#      context: &ctx ../../submodules/llm_cstk/
+#      dockerfile: docker/llm/Dockerfile
+#    deploy: &deploy
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: all
+#              capabilities: [ gpu ]
+#    ports:
+#      - "8001:8000"
+#    volumes: &vol
+#      - /home/scotti/Projects/me_project/experiments:/app/llm_cstk/experiments
+#      - /home/scotti/Projects/me_project/resources:/app/llm_cstk/resources
+#      - /home/scotti/Projects/me_project/services:/app/llm_cstk/services
+#    command: python3 -m llama_cpp.server --model "./resources/models/pre_trained/TheBloke-Vicuna-13B-v-1-5-16K-GGUF/vicuna-13b-v1.5-16k.Q5_K_M.gguf" --chat_format vicuna --n_gpu_layers -1 --rope_freq_scale 0.25 --n_ctx 8192
+#    command: python3 -m llama_cpp.server --model "./resources/models/pre_trained/Meta-Llama-3-8B-Instruct.Q5_K_M.gguf" --chat_format llama-3 --n_gpu_layers -1 --n_ctx 8192
+  me_generator:
+    build:
+      context: &ctx ../../submodules/llm_cstk/
+      dockerfile: &cstk_dockerfile docker/cstk/Dockerfile
+    deploy: &deploy
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              # count: all
+              device_ids: ['0']
+              capabilities: [ gpu ]
+    ports:
+      - "5991:5000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes: &vol
+      - /home/scotti/Projects/me_project/experiments:/app/llm_cstk/experiments
+      - /home/scotti/Projects/me_project/resources:/app/llm_cstk/resources
+      - /home/scotti/Projects/me_project/services:/app/llm_cstk/services
+    command: python3 ./src/script/generator_server.py --config_file_path ./resources/configs/web_api/generator_api.yml
+  me_retrieval:
+    build:
+      context: *ctx
+      dockerfile: *cstk_dockerfile
+    deploy: *deploy
+    ports:
+      - "5990:5000"
+    volumes: *vol
+    command: python3 ./src/script/retrieval_server.py --config_file_path ./resources/configs/web_api/retrieval_api.yml
+  me_demo:
+    build:
+      context: ../../
+      dockerfile: docker/me_environment/Dockerfile
+    # network_mode: host
+    ports:
+      - "8990:8000"
+    volumes:
+      - /home/scotti/Projects/me_project/experiments:/app/llm_cstk/experiments
+      - /home/scotti/Projects/me_project/resources:/app/llm_cstk/resources
+      - /home/scotti/Projects/me_project/services:/app/llm_cstk/services
+      - /home/scotti/Projects/me_project/src:/app/me_project/src
+      - /home/scotti/Projects/me_project/submodules:/app/me_project/submodules
+    command: python3 ./src/web_app/manage.py runserver 0.0.0.0:8000
+volumes:
+  experiments:
+    name: experiments
+  resources:
+    name: resources
+  services:
+    name: services
+  src:
+    name: src
+  submodules:
+    name: submodules

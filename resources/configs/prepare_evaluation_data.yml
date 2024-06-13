@@ -1,0 +1,35 @@
+# Corpora
+corpora:
+  - natcs
+  - tweet_summ
+  - tsccv2
+n_samples: 100
+# Model configs
+models:
+  llm:
+    configs:
+      - config_id: mistral_7b_openorca_4_shots_relevant
+        chat_settings:
+          n_candidates: 0
+          n_docs: 0
+          n_shots: 4
+          ranking: semantic
+          reranking: null
+          doc_selection: null
+      - config_id: mistral_7b_openorca_4_shots_random
+        chat_settings:
+          n_candidates: 0
+          n_docs: 0
+          n_shots: 4
+          ranking: semantic
+          reranking: null
+          doc_selection: null
+          relevant_shots: false
+      - config_id: mistral_7b_openorca_0_shots
+        chat_settings:
+          n_candidates: 0
+          n_docs: 0
+          n_shots: 0
+          ranking: null
+          reranking: null
+          doc_selection: null

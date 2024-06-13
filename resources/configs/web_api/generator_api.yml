@@ -1,0 +1,268 @@
+# Global
+data_dir_path: &data_dir_path ./resources/data/retrieval/
+services_dir_path: ./services/
+service: generator
+log_file: true
+log_level: INFO
+# FLASK application
+flask:  # Passed to the Flask object run method
+  host: 0.0.0.0  # 127.0.0.1
+  # port: 5001
+  threaded: true
+# Generator
+generator:
+  llm:
+    url: http://host.docker.internal:51124  # http://127.0.0.1:8001
+    generate_params:
+      default: &default_generate_params
+        response_suggestion:
+          max_tokens: 256
+          top_p: 0.95
+          top_k: 0
+          repeat_penalty: 1.1
+          stop:
+            - &utterances_sep "\n---\n"
+        info_extraction: &default_chat_completion_config
+          temperature: 0.0
+          max_tokens: 512
+          top_p: 0
+          top_k: 0
+          repeat_penalty: 1.1
+          stop:
+            # - &eos_sep "<|im_end|>"
+            - &eos_sep "<|eot_id|>"
+        query_extraction: {}  # TODO
+        query_recognition: &yn_question_config
+          temperature: 0.0
+          max_tokens: 8
+          top_p: 0
+          top_k: 0
+          stop:
+            - *eos_sep
+        relevant_documents_selection: *yn_question_config
+        kb_qa: *default_chat_completion_config
+    instructions:
+      response_suggestion:
+        default:
+          "
+          The following are support dialogues between two or more speakers, speakers are either providing support or being helped.
+          Each dialogue is introduced by a message from \"system\" providing the available information on the dialogue.
+          Dialogue utterances are in the form \"[speaker id/system]: [text]\" and are separated by the sequence \"\\n---\\n\".
+          The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted.
+          People in the dialogue are very respectful, honest and they always answer as helpfully as possible, while being safe.
+          Answers stick to the topic of the current support request and never include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content.
+          When questions do not make any sense or are not factually correct, people avoid answering incorrect information and explain why they have not understood and ask for a clarification.
+          When people do not know the answers to a question, they avoid sharing false information.
+          When applicable, \"system\" intervenes to offer a document search or supply, possibly, (1) relevant documents (or document passages), coming from the search among old dialogue, (2) example responses; both to help people answer.
+          People can search and exploit additional information in the documents and the example responses provided by \"system\" to answer.
+          "
+        natcs:
+          "
+          The following are customer support dialogues between an agent providing support and the customer being helped.
+          Each dialogue is introduced by a message from \"system\" providing the available information on the dialogue.
+          Dialogue utterances are in the form \"[Agent/Customer/system]: [text]\" and are separated by the sequence \"\\n---\\n\".
+          The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted.
+          People in the dialogue are very respectful, honest and they always answer as helpfully as possible, while being safe.
+          Answers stick to the topic of the current support request and never include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content.
+          When questions do not make any sense or are not factually correct, people avoid answering incorrect information and explain why they have not understood and ask for a clarification.
+          When people do not know the answers to a question, they avoid sharing false information.
+          When applicable, \"system\" intervenes to offer a document search or supply, possibly, (1) relevant documents (or document passages), coming from the search among old dialogue, (2) example responses; both to help people answer.
+          People can search and exploit additional information in the documents and the example responses provided by \"system\" to answer.
+          "
+        tweet_summ:
+          "
+          The following are customer support dialogues on Twitter between an expert providing support on a product or service of a specific brand and one or more customers being helped.
+          Each dialogue is introduced by a message from \"system\" providing the available information on the dialogue.
+          Dialogue utterances are in the form \"[Support/Customer [ID]/system]: [text]\" and are separated by the sequence \"\\n---\\n\".
+          The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted.
+          People in the dialogue are very respectful, honest and they always answer as helpfully as possible, while being safe.
+          Answers stick to the topic of the current support request and never include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content.
+          When questions do not make any sense or are not factually correct, people avoid answering incorrect information and explain why they have not understood and ask for a clarification.
+          When people do not know the answers to a question, they avoid sharing false information.
+          When applicable, \"system\" intervenes to offer a document search or supply, possibly, (1) relevant documents (or document passages), coming from the search among old dialogue, (2) example responses; both to help people answer.
+          People can search and exploit additional information in the documents and the example responses provided by \"system\" to answer.
+          "
+        tsccv2:
+          "
+          The following are anonymised teacher-student chats between a teacher and a student learning English.
+          Each dialogue is introduced by a message from \"system\" providing the available information on the dialogue.
+          Dialogue utterances are in the form \"[Teacher/Student/system]: [text]\" and are separated by the sequence \"\\n---\\n\".
+          The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted.
+          People in the dialogue are very respectful, honest and they always answer as helpfully as possible, while being safe.
+          Answers stick to the topic of the current support request and never include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content.
+          When questions do not make any sense or are not factually correct, people avoid answering incorrect information and explain why they have not understood and ask for a clarification.
+          When people do not know the answers to a question, they avoid sharing false information.
+          When applicable, \"system\" intervenes to offer a document search or supply, possibly, (1) relevant documents (or document passages), coming from the search among old dialogue, (2) example responses; both to help people answer.
+          People can search and exploit additional information in the documents and the example responses provided by \"system\" to answer.
+          "
+      info_extraction: &default_instructions
+        default: &default_instruction
+          "
+          You are a helpful assistant. Please answer truthfully and write out your 
+          thinking step by step to be sure you get the right answer. If you make a mistake or encounter 
+          an error in your thinking, say so out loud and attempt to correct it. If you don't know or 
+          aren't sure about something, say so clearly. You will act as a professional logician, mathematician, 
+          and physicist. You will also act as the most appropriate type of expert to answer any particular 
+          question or solve the relevant problem; state which expert type your are, if so. Also think of 
+          any particular named expert that would be ideal to answer the relevant question or solve the 
+          relevant problem; name and act as them, if appropriate.
+          "
+      query_extraction: *default_instructions
+      query_recognition: *default_instructions
+      relevant_document_selection: *default_instructions
+      qa: *default_instructions
+    templates:
+      response_suggestion:
+        default:
+          dialogue:
+            sep: "\n---\n"
+          utterances:
+            format: "{}: {}"
+            sep: *utterances_sep
+            n_ctx: 12
+          prompt:
+            format: "{}:"
+          candidates:
+            prefix: "Response example(s)"
+            format: "Example {}:\n```\n{}\n```"
+          docs:
+            prefix: "Relevant document(s)"
+            format: "Document {}:\n```\n{}\n```"
+      info_extraction:
+        default:
+          instructions: &default_instructions_template
+            # format: "<|im_start|>system\n{}<|im_end|>"
+            format: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{}<|eot_id|>"
+          utterances: &default_utterances_template
+            formats:
+              # system: "<|im_start|>user\n{}<|im_end|>"  # "USER: {} "
+              system: "<|start_header_id|>system<|end_header_id|>\n\n{}<|eot_id|>"
+              # user: "<|im_start|>user\n{}<|im_end|>"
+              user: "<|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|>"
+              # assistant: "<|im_start|>assistant\n{}<|im_end|>"
+              assistant: "<|start_header_id|>assistant<|end_header_id|>\n\n{}<|eot_id|>"
+            # sep: "\n"
+            sep: ""
+            # suffix: "<|im_start|>assistant\n"
+            suffix: "<|start_header_id|>assistant<|end_header_id|>\n\n"
+          doc: &default_doc_template
+            format: "Document:\n```\n{}\n```"
+          directive:
+            format:
+              "
+              I require you assistance to analyse the following document.
+              "
+        natcs:
+          instructions: *default_instructions_template
+          utterances: *default_utterances_template
+          doc: *default_doc_template
+          directive:
+            format:
+              "
+              I require you assistance to analyse the following document.
+              The document contains a chat about customer support between an agent providing support and the customer being helped.
+              "
+        tweet_summ:
+          instructions: *default_instructions_template
+          utterances: *default_utterances_template
+          doc: *default_doc_template
+          directive:
+            format:
+              "
+              I require you assistance to analyse the following document.
+              The document contains a customer support chat from Twitter between an expert providing support on a product or service of a specific brand and one or more customers being helped.
+              "
+        tsccv2:
+          instructions: *default_instructions_template
+          utterances: *default_utterances_template
+          doc: *default_doc_template
+          directive:
+            format:
+              "
+              I require you assistance to analyse the following document.
+              The document contains an anonymised teacher-student chat between a teacher and a student learning English.
+              "
+      query_extraction:
+        default:
+          instructions: *default_instructions_template
+          utterances: *default_utterances_template
+          snippet: &default_query_extraction_snippet
+            format: "What is the question or request being asked in the following dialogue snippet?\n\n```\n{}\n```"
+          examples:
+            - input: ""
+              output: ""
+            - input: ""
+              output: ""
+            - input: ""
+              output: "None."
+            - input: ""
+              output: "None."
+          directive: &default_query_extraction_directive
+            "
+            Extract the question or request for information being asked given a reference dialogue snippet (i.e., the last few messages exchanged in a dialogue). 
+            Answer \"none\" if the there is no question or request being asked.
+            "
+      query_recognition:
+        default:
+          instructions: *default_instructions_template
+          utterances: *default_utterances_template
+          query: &default_query_recognition_query
+            format: "Is the sentence \"{}\" either a question or an information request?"
+          examples:
+            - input: "Which was David Lynch first movie?"  # Question
+              output: "Yes."
+            - input: "Provide steps to change a tire"  # Request
+              output: "Yes."
+            - input: "retrieve engineering university minimum enrollment requirements in italy."  # Information query
+              output: "Yes."
+            - input: "George Orwell"   # Query
+              output: "No."
+            - input: "Flights to Hawaii"  # Query
+              output: "No."
+          directive: &default_query_recognition_directive
+            "
+            State whether the following sentences or pieces of text are either questions or information requests. 
+            Answer only \"yes\" or \"no\".
+            "
+      relevant_document_selection:
+        default:
+          instructions: *default_instructions_template
+          utterances: *default_utterances_template
+          query_doc_pair: &default_relevant_document_selection_query_doc_pair
+            format: "Does the following document contain useful information to answer the question \"{}\"?\n\nDocument:\n```{}```"
+          examples:
+            - input:
+                question: "What types of waves do seismologists use to image the interior of the Earth?"
+                document: "Seismologists can use the arrival times of seismic waves in reverse to image the interior of the Earth. Early advances in this field showed the existence of a liquid outer core (where shear waves were not able to propagate) and a dense solid inner core. (...)"
+              output: "Yes."
+            - input:
+                question: "As of January 2016 how many digits does the largest known prime consist of?"
+                document: "(...) These include the Miller–Rabin primality test, which is fast but has a small probability of error, and the AKS primality test, which always produces the correct answer in polynomial time but is too slow to be practical. Particularly fast methods are available for numbers of special forms, such as Mersenne numbers. As of January 2016[update], the largest known prime number has 22,338,618 decimal digits."
+              output: "Yes."
+            - input:
+                question: "Which laws faced significant opposition?"
+                document: "(...) Other legislation followed, including the Migratory Bird Conservation Act of 1929, a 1937 treaty prohibiting the hunting of right and gray whales, and the Bald Eagle Protection Act of 1940. These later laws had a low cost to society—the species were rela- tively rare—and little opposition was raised."
+              output: "No."
+            - input:
+                question: "What was the projection of sea level increases in the fourth assessment report?"
+                document: "These values are much greater than the 9–88 cm as projected (...) in its Third Assessment Report."
+              output: "No."
+          directive: &default_relevant_document_selection_directive
+            "
+            State whether the following documents are relevant to the given queries (i.e., whether the document contains or not information useful to answer the given question). 
+            Answer only \"yes\" or \"no\".
+            "
+      kb_qa:
+        default:
+          instructions: *default_instructions_template
+          utterances: *default_utterances_template
+          question:
+            format: "Q: {}\n\nReference document(s):\n{}"
+          answer:
+            format: "{}"
+          doc:
+            format: "Document {}:\n```\n{}\n```"
+          directive:
+            "
+            Answer to the following questions given the reference documents (or document passages).
+            "

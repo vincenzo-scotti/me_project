@@ -1,0 +1,28 @@
+# Global
+pre_processed_data_dir_path: ./resources/data/preprocessed/
+retrieval_data_dir_path: ./resources/data/retrieval/
+# Indexing
+index:
+  semantic:
+    - # transformer: paraphrase-multilingual-mpnet-base-v2
+      transformer: sentence-transformers-paraphrase-multilingual-mpnet-base-v2
+      model_path: ./resources/models/pre_trained/sentence-transformers-paraphrase-multilingual-mpnet-base-v2
+      ann: hnswlib
+      tensors: true
+      normalise: true
+      top_k: 1000
+# Corpora
+corpora:
+  tsccv2:
+    args:
+      - ./resources/data/raw/TeacherStudentChatroomCorpus_v2/
+    kwargs:
+      holdout: 0.1
+      random_seed: 42
+  natcs:
+    args:
+      - ./resources/data/raw/dstc11-track2-intent-induction-main/
+  tweet_summ:
+    args:
+      - ./resources/data/raw/Customer Support on Twitter/
+      - ./resources/data/raw/Tweetsumm-main/

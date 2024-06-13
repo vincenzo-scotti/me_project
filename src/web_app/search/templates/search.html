@@ -1,0 +1,1073 @@
+{% extends 'main.html' %}
+
+{% block title %}Search{% endblock %}
+
+{% block style %}
+<style>
+    html,
+    body {
+        height: 100%;
+        margin: 0;
+    }
+    .card-chat-container {
+        position: relative;
+    }
+    .btn-feedback {
+        transition: all 0.3s;
+    }
+    .btn-feedback:hover {
+        color: black !important;
+    }
+    .btn-feedback--active {
+        color: black !important;
+    }
+</style>
+{% endblock %}
+
+{% block menu %}
+{{ block.super }}
+<div class="modal fade" id="id_settings_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Search settings</span>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="id_settings_form">
+                <div class="modal-body" id="id_settings_modal_body">
+                    {% csrf_token %}
+                    <!-- Search parameters -->
+                    <div class="row row-fill">
+                        {% for field in settings_form %}
+                        <div class="form-group col-md-6">
+                            {{ field.label }}
+                            {{ field }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="id_close_settings_modal" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Close
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="id_submit_settings_modal">
+                        Save changes&nbsp;
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="id_settings_spinner" hidden></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="height: 87.5vh; display: flex; flex-direction: column;">
+    <div class="row row-cols-3" id="id_navigation_row" style="display: flex; flex-direction: row;" hidden>
+        <div class="col" id="id_search_nav_col"></div>
+        <div class="col" id="id_details_nav_col" hidden>
+            <div class="d-flex gap-3">
+                <button type="button" class="btn btn-secondary col" id="id_close_details_button" style="max-width: 33%">Close</button>
+            </div>
+        </div>
+        <div class="col align-items-center" style="display: flex; justify-content: space-between" id="id_analysis_nav_col" hidden>
+            <ul class="nav nav-pills gap-3" style="display: flex; width: 90%" id="id_analysis_nav" role="tablist">
+                <li class="nav-item col" role="presentation">
+                    <a class="nav-link active" id="id_contextual_chat_tab_pill" data-bs-toggle="tab"
+                       href="#id_contextual_chat_tab" role="tab"
+                       aria-controls="id_contextual_chat_tab" aria-selected="true">Chat</a>
+                </li>
+                <li class="nav-item col" role="presentation">
+                    <a class="nav-link" id="id_relevant_docs_tab_pill" data-bs-toggle="tab" href="#id_relevant_docs_tab" role="tab" aria-controls="id_relevant_docs_tab" aria-selected="false">
+                        Related tickets&nbsp;
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="id_search_related_spinner" hidden></span>
+                    </a>
+                </li>
+                <li class="nav-item col" role="presentation">
+                    <a class="nav-link" id="id_relevant_docs_details_tab_pill" data-bs-toggle="tab"
+                       href="#id_relevant_docs_details_tab" role="tab"
+                       aria-controls="id_relevant_docs_details_tab"
+                       aria-selected="false" hidden>Related ticket details&nbsp;
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="id_detail_related_spinner" hidden></span>
+                    </a>
+                </li>
+            </ul>
+            <div class="spinner-grow text-primary" role="status" id="id_chat_spinner" hidden></div>
+        </div>
+    </div>
+    <br/>
+    <div class="row row-cols-3" id="id_content_row"
+         style="height: 87.5vh; display: flex; flex-direction: row; flex: 1;"
+         hidden>
+        <div class="col" id="id_search_results_panel">
+            <div class="card card-body" id="id_search_results_container" style="height: 87.5vh; overflow-y: hidden">
+                Loading results...
+            </div>
+        </div>
+        <div class="col" id="id_details_panel" hidden>
+            <div class="card card-body" id="id_details_container" style="height: 87.5vh; overflow-y: hidden">
+                Loading ticket details...
+            </div>
+        </div>
+        <div class="col tab-content" id="id_analysis_panel" hidden>
+            <div class="tab-pane fade show active" id="id_contextual_chat_tab" role="tabpanel"
+                 aria-labelledby="id_contextual_chat_tab_pill" style="height: 87.5vh;"> <!-- display:flex;  -->
+                <div style="height: 100%; display:flex; justify-content: space-between; flex-direction: column;">
+                    <div class="card card-body d-grid gap-3 card-chat-container" id="id_analysis_chat_card" style="overflow-y: auto;"> <!-- style="max-height: 82.5vh; overflow-y: scroll; display:flex; justify-content: flex-end; flex-direction: column"> -->
+                        <div class="container" style="height: 100%;">
+                            <div class="row">
+                                <div class="d-grid gap-3" id="id_contextual_chat_container">
+                                    <!-- Contextual chat... -->
+                                </div>
+                            </div>
+                        </div>
+                        <!-- <div class="spinner-grow text-primary" role="status" id="chat_loading_icon" hidden></div> -->
+                    </div>
+                    <br/>
+                    <div class="d-flex gap-3" id="id_action_buttons">
+                        <button type="button" class="btn btn-primary col" id="id_summary_button" style="flex: 1 1 0">
+                            Generate summary
+                        </button>
+                        <button type="button" class="btn btn-primary col" id="id_problem_button" style="flex: 1 1 0">
+                            Describe problem
+                        </button>
+                        <button type="button" class="btn btn-primary col" id="id_solved_button" style="flex: 1 1 0">
+                            Check solved
+                        </button>
+                    </div>
+                    <br/>
+                    <form id="id_message_form">
+                        <div class="input-group">
+                            <textarea class="form-control" id="id_message_text_area" rows="1"
+                                      placeholder="Message"></textarea>
+                            <button class="btn btn-primary d-flex justify-content-center align-items-center" type="submit" id="id_message_button">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                   fill="currentColor" class="bi bi-send-fill" viewBox="0 0 16 16"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z"/>
+                                </svg>&nbsp;Send&nbsp;
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="chat_loading_icon" hidden></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="id_relevant_docs_tab" role="tabpanel"
+                 aria-labelledby="id_relevant_docs_tab_pill" style="height: 87.5vh;">
+                <div class="card card-body" id="id_relevant_docs_container" style="height: 100%;">
+                    <!-- Related documents -->
+                </div>
+            </div>
+            <div class="tab-pane fade" id="id_relevant_docs_details_tab" role="tabpanel"
+                 aria-labelledby="id_relevant_docs_details_tab_pill" style="height: 87.5vh;">
+                <div class="card card-body" id="id_relevant_docs_details_container" style="height: 100%;">
+                    <!-- Related document details -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row" style="text-align: center" id="id_search_welcome_message">
+        <h1>Search</h1>
+        <p>Search support chat documents in the available corpora and use LLMs to analyse these chats.</p>
+        <br/>
+        <div class="container" style="width: 33%">
+            {% if data_set_id == 'natcs' %}
+            <form class="d-flex" role="search" id="id_search_form" action="{% url 'results_natcs' %}" method="get">
+            {% elif data_set_id == 'tweet_summ' %}
+            <form class="d-flex" role="search" id="id_search_form" action="{% url 'results_tweet_summ' %}" method="get">
+            {% elif data_set_id == 'tsccv2' %}
+            <form class="d-flex" role="search" id="id_search_form" action="{% url 'results_tsccv2' %}" method="get">
+            {% endif %}
+                {% csrf_token %}
+                {{ text_search_form.query }}
+                <button class="btn btn-primary d-flex justify-content-center align-items-center" type="submit" id="id_search_button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                         fill="currentColor"
+                         class="bi bi-search" viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>&nbsp;Search&nbsp;
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="id_search_spinner" hidden></span>
+                </button>
+            </form>
+        </div>
+    </div>
+    <br/>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // # Global variables
+    let chat_socket = null;
+    let data_set_id = null;
+    let summary_asked = false;
+    let problem_asked = false;
+    let solved_asked = false;
+    // # Event listeners
+    document.addEventListener('DOMContentLoaded', function () {
+        // # Reset button
+        document.getElementById('id_search_navigation').classList.add('active');
+        // # Forms
+        // ## Search
+        let search_form = document.getElementById('id_search_form');
+        search_form.addEventListener(
+            'submit',
+            function (event) {
+                // # Block default behaviour
+                event.preventDefault();
+                // Forward request and get results
+                search_query();
+            }
+        );
+        // ## Settings
+        let settings_form = document.getElementById('id_settings_form');
+        settings_form.addEventListener(
+            'submit',
+            function (event) {
+                // # Block default behaviour
+                event.preventDefault();
+                // # Forward request and get updated values
+                update_settings();
+            }
+        );
+        let settings_form_data = new FormData(settings_form);
+        data_set_id = settings_form_data.get('data_set_id');
+
+        // # Navigation buttons
+        // ## Close analysis
+        let back_to_results_button = document.getElementById('id_close_details_button');
+        back_to_results_button.addEventListener(
+            'click',
+            function (event) {
+                // # Clear details
+                clear_details()
+                // # Clear analysis
+                clear_analysis()
+            }
+        )
+        // ## Chat
+        let contextual_chat_button = document.getElementById('id_contextual_chat_tab_pill')
+        contextual_chat_button.addEventListener(
+            'click',
+            function (event) {
+                // # Hide open related chat
+                clear_related_details();
+            }
+        )
+        // ## Related tickets
+        let related_discussions_button = document.getElementById('id_relevant_docs_tab_pill')
+        related_discussions_button.addEventListener(
+            'click',
+            function (event) {
+                // # Hide open related chat
+                clear_related_details();
+                // # Check whether is empty
+                if (document.getElementById('id_relevant_docs_container').childNodes.length === 0) {
+                    // # Load related documents
+                    search_related_tickets()
+                }
+            }
+        )
+
+        // # Chat
+        let new_message_text_area = document.getElementById('id_message_text_area');
+        let send_message_button = document.getElementById('id_message_button');
+        // ## Enter pressed in text area
+        new_message_text_area.addEventListener(
+            'keydown',
+            function (event) {
+                // # Check pressed key
+                if (event.code === "Enter" && !event.shiftKey) {
+                    // # Block default behaviour
+                    event.preventDefault();
+                    // # Call submit of message
+                    send_message_button.click();
+                }
+            }
+        );
+        // ## Send message button pressed
+        send_message_button.addEventListener(
+            'click',
+            function (event) {
+                // # Block default behaviour
+                event.preventDefault();
+                // # Send message
+                send_user_message(document.getElementById('id_message_text_area').value);
+            }
+        );
+        // ## Action buttons
+        let summary_button = document.getElementById('id_summary_button');
+        let problem_button = document.getElementById('id_problem_button');
+        let closed_button = document.getElementById('id_solved_button');
+        // ### Summary button pressed
+        summary_button.addEventListener(
+            'click',
+            function (event) {
+                // # Block default behaviour
+                event.preventDefault();
+                // # Send message
+                send_user_message("Write a short summary of the document, please.");
+                // # Register use
+                summary_asked = true;
+            }
+        );
+        // ### Problem button pressed
+        problem_button.addEventListener(
+            'click',
+            function (event) {
+                // # Block default behaviour
+                event.preventDefault();
+                // # Send message
+                if (data_set_id === 'natcs' || data_set_id === 'tweet_summ') {
+                    send_user_message("What is the problem reported by the customer in the document?");
+                } else if (data_set_id === 'tsccv2') {
+                    send_user_message("What are the problems reported or showed by the student in the document?");
+                } else {
+                   send_user_message("What was the problem described in the document?");
+                }
+                // # Register use
+                problem_asked = true;
+            }
+        );
+        // ### Closed button pressed
+        closed_button.addEventListener(
+            'click',
+            function (event) {
+                // # Block default behaviour
+                event.preventDefault();
+                // # Send message
+                if (data_set_id === 'natcs' || data_set_id === 'tweet_summ') {
+                    send_user_message("Was the problem described by the customer in the document solved successfully?");
+                } else if (data_set_id === 'tsccv2') {
+                    send_user_message("Was the problem described or showed by the student solved successfully?");
+                } else {
+                   send_user_message("Was the problem described in the document solved successfully?");
+                }
+                // # Register use
+                solved_asked = true;
+            }
+        );
+    })
+
+
+    // # Functions
+    function send_user_message(message_text) {
+        // # Build message data
+        let user_id = "user";
+        let document_id = document.getElementById("id_ticket_details").dataset.id;
+        // # Disable buttons
+        document.getElementById("id_message_button").disabled = true;
+        document.getElementById("id_summary_button").disabled = true;
+        document.getElementById("id_problem_button").disabled = true;
+        document.getElementById("id_solved_button").disabled = true;
+        // # Show loading icons
+        document.getElementById('chat_loading_icon').hidden = false;
+        document.getElementById('id_chat_spinner').hidden = false;
+        // # Send message
+        chat_socket.send(JSON.stringify(
+            {document_id: document_id, speaker: user_id, text: message_text}
+        ));
+        // # Clear message area
+        document.getElementById('id_message_text_area').value = null;
+    }
+
+
+    function search_query() {
+        // # Clear details
+        clear_details()
+        // # Clear analysis
+        clear_analysis()
+        // # Get form
+        let search_form = document.getElementById('id_search_form');
+        // Read form and target URL
+        let form_data = new FormData(search_form);
+        let form_url = new URLSearchParams(form_data);
+        // Compose request URL
+        let request_url = search_form.action + '?' + form_url.toString();
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // Update the HTML
+                document.getElementById('id_search_results_container').innerHTML = response_doc.getElementById('id_search_results_container').innerHTML;
+                // # Check for QA
+                ask_question();
+                // # Add listeners
+                post_process_search_query_page();
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${request_url}`)
+            }
+            // # Hide loading icon
+            document.getElementById('id_search_spinner').hidden = true;
+            // # Enable search button
+            document.getElementById('id_search_button').disabled = false;
+            // # Restore results opacity
+            document.getElementById('id_search_results_container').style.opacity = '1.0';
+        };
+        xhr.send();
+        // # Display loading icon
+        document.getElementById('id_search_spinner').hidden = false;
+        // # Disable search button
+        document.getElementById('id_search_button').disabled = true;
+        // # Make current results opaque
+        document.getElementById('id_search_results_container').style.opacity = '0.33';
+        // # Move the form in the updated page (if needed)
+        let search_nav_col = document.getElementById('id_search_nav_col');
+        if (search_nav_col.childNodes.length === 0) {
+            search_nav_col.appendChild(search_form);
+        }
+        // # Update elements visibility
+        document.getElementById('id_search_welcome_message').hidden = true;
+        document.getElementById('id_navigation_row').hidden = false;
+        document.getElementById('id_content_row').hidden = false;
+    }
+
+
+    function change_results_page(request_url) {
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // # Check for QA
+                let qa_element = document.getElementById('id_qa_container');
+                // Update the HTML
+                document.getElementById('id_search_results_container').innerHTML = response_doc.getElementById('id_search_results_container').innerHTML;
+                if (qa_element !== null) {
+                    document.getElementById('id_search_results_scrollable').prepend(qa_element);
+                }
+                // # Add listeners
+                post_process_search_query_page();
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${request_url}`)
+            }
+            // # Hide loading icon
+            document.getElementById('id_search_spinner').hidden = true;
+            // # Enable search button
+            document.getElementById('id_search_button').disabled = false;
+            // # Restore results opacity
+            document.getElementById('id_search_results_container').style.opacity = '1.0';
+        };
+        xhr.send();
+        // # Display loading icon
+        document.getElementById('id_search_spinner').hidden = false;
+        // # Disable search button
+        document.getElementById('id_search_button').disabled = true;
+        // # Make current results opaque
+        document.getElementById('id_search_results_container').style.opacity = '0.33';
+    }
+
+
+    function post_process_search_query_page() {
+        // # Add event listeners
+        // ## Results details
+        try {
+            let result_titles = document.getElementById('id_search_results_container').querySelectorAll('.result-title');
+            result_titles.forEach((result_title) => {
+                result_title.addEventListener('click', function (event) {
+                    // # Block default behaviour
+                    event.preventDefault();
+                    // # Clear details
+                    clear_details();
+                    // # Clear analysis
+                    clear_analysis();
+                    // # Retrieve ticket details
+                    open_details(
+                        result_title.getAttribute('href') +
+                        '?' +
+                        `search=${document.getElementById('id_search_results').dataset.searchId}`
+                    );
+                    // # Open analysis
+                    open_analysis(result_title.dataset.id, result_title.dataset.corpus);
+                });
+            });
+        } catch (error) {
+            console.log('No titles found in search results container, skipping.');
+        }
+        // ## Pagination elements
+        try {
+            let result_page_links = document.getElementById('id_search_results_pagination').querySelectorAll('.page-link');
+            result_page_links.forEach((result_page_link) => {
+                let request_link = result_page_link.getAttribute('href')
+                if (request_link !== '#') {
+                    result_page_link.addEventListener('click', function (event) {
+                        // # Block default behaviour
+                        event.preventDefault();
+                        // # Retrieve required page
+                        change_results_page(result_page_link);
+                    });
+                }
+            });
+        } catch (error) {
+            console.log('No pagination found in search results container, skipping.');
+        }
+    }
+
+
+    function ask_question() {
+        // Get form
+        let search_form = document.getElementById('id_search_form');
+         // Read form
+        let form_data = new FormData(search_form);
+        // Get query
+        let query = form_data.get('query');
+        // Compose request URL
+        let request_url = null;
+        if (data_set_id === 'natcs') {
+            request_url = "{% url 'qa_natcs' %}";
+        } else if (data_set_id === 'tweet_summ') {
+            request_url = "{% url 'qa_tweet_summ' %}";
+        } else if (data_set_id === 'tsccv2') {
+            request_url = "{% url 'qa_tsccv2' %}";
+        }
+        request_url += '?' + `csrfmiddlewaretoken=${form_data.get('csrfmiddlewaretoken')}&query=${encodeURIComponent(query)}`
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // Get target element
+                let qa_element = response_doc.getElementById('id_qa_container');
+                // # Add listeners
+                try {
+                    let references = qa_element.querySelectorAll('.doc-reference');
+                    references.forEach((reference) => {
+                        reference.addEventListener('click', function (event) {
+                            // # Block default behaviour
+                            event.preventDefault();
+                            // # Clear details
+                            clear_details();
+                            // # Clear analysis
+                            clear_analysis();
+                            // # Retrieve ticket details
+                            open_details(reference.getAttribute('href'));
+                            // # Open analysis
+                            open_analysis(reference.dataset.id, reference.dataset.corpus);
+                        });
+                    });
+                } catch (error) {
+                    console.log('No references found in QA response, skipping.');
+                }
+                // Update the HTML
+                document.getElementById('id_search_results_scrollable').prepend(qa_element);
+            } else if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 204) {
+                console.log(`No response received`);
+            } else if (xhr.readyState !== XMLHttpRequest.DONE) {
+                // Handle error
+                console.log(`Waiting request completion`);
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${request_url}`);
+            }
+        };
+        xhr.send();
+    }
+
+
+    function update_settings() {
+        // # Get form
+        let settings_form = document.getElementById('id_settings_form');
+        // # Clear details
+        clear_details();
+        // # Clear analysis
+        clear_analysis();
+        // Read form and target URL
+        let form_data = new FormData(settings_form);
+        let form_url = new URLSearchParams(form_data);
+        // Compose request URL
+        let request_url = settings_form.action + '?' + form_url.toString();
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                //
+                let search_form = document.getElementById('id_search_form');
+                let search_form_data = new FormData(search_form);
+                let query = search_form_data.get('query');
+                // Update the HTML
+                document.getElementById('id_settings_modal').innerHTML = response_doc.getElementById('id_settings_modal').innerHTML;
+                document.getElementById('id_search_form').innerHTML = response_doc.getElementById('id_search_form').innerHTML;
+                document.getElementById('id_search_form').setAttribute(
+                    'action', response_doc.getElementById('id_search_form').getAttribute('action')
+                );
+                document.getElementById('id_search_form').elements["query"].value = query;
+                // # Add form submission observer
+                document.getElementById('id_settings_form').addEventListener(
+                    'submit',
+                    function (event) {
+                        // # Block default behaviour
+                        event.preventDefault();
+                        // # Forward request and get updated values
+                        update_settings();
+                    }
+                );
+                // # Update data set ID
+                let settings_form_data = new FormData(settings_form);
+                data_set_id = settings_form_data.get('data_set_id');
+                // # Check whether there was an open search to re-run
+                if (query !== null && query.length > 0) {
+                    search_query();
+                }
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using POST at ${request_url}`)
+            }
+            // # Hide loading icon
+            document.getElementById('id_settings_spinner').hidden = true;
+            // # Enable submission and close buttons
+            document.getElementById('id_close_settings_modal').disabled = false;
+            document.getElementById('id_submit_settings_modal').disabled = false;
+            // # Close form
+            document.getElementById('id_close_settings_modal').click();
+        };
+        xhr.send(form_data);
+        // # Display loading icon
+        document.getElementById('id_settings_spinner').hidden = false;
+        // # Disable submission and close buttons
+        document.getElementById('id_close_settings_modal').disabled = true;
+        document.getElementById('id_submit_settings_modal').disabled = true;
+    }
+
+
+    function search_related_tickets() {
+        // # Get form
+        let search_form = document.getElementById('id_search_form');
+         // Read form
+        let form_data = new FormData(search_form);
+        // Compose request URL
+        let request_url = search_form.action + '?' + `csrfmiddlewaretoken=${form_data.get('csrfmiddlewaretoken')}&reference_doc=${document.getElementById("id_ticket_details").dataset.id}`
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // Update the HTML
+                document.getElementById('id_relevant_docs_container').innerHTML = response_doc.getElementById('id_search_results_container_relevant_docs').innerHTML;
+                // # Add listeners
+                post_process_search_related_page();
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${request_url}`)
+            }
+            // # Hide loading icon
+            document.getElementById('id_search_related_spinner').hidden = true;
+            // # Enable submission and close buttons
+            document.getElementById('id_relevant_docs_tab_pill').disabled = false;
+        };
+        xhr.send();
+        // # Display loading icon
+        document.getElementById('id_search_related_spinner').hidden = false;
+        // # Disable search button
+        document.getElementById('id_relevant_docs_tab_pill').disabled = true;
+    }
+
+
+    function post_process_search_related_page() {
+        // # Add event listeners
+        // ## Results details
+        try {
+            let result_titles = document.getElementById('id_relevant_docs_container').querySelectorAll('.result-title');
+            result_titles.forEach((result_title) => {
+                result_title.addEventListener('click', function (event) {
+                    // # Block default behaviour
+                    event.preventDefault();
+                    // # Display ticket details tab
+                    let relevant_doc_details_button = document.getElementById('id_relevant_docs_details_tab_pill');
+                    relevant_doc_details_button.hidden = false;
+                    // # Retrieve ticket details
+                    open_related_details(
+                        result_title.getAttribute('href') +
+                        '?' +
+                        `reference_doc=${document.getElementById('id_search_results_relevant_docs').dataset.referenceDocId}`
+                    );
+                    // # Open ticket details tab
+                    relevant_doc_details_button.click();
+                });
+            });
+        } catch (error) {
+            console.log('No titles found in relevant docs container, skipping.');
+        }
+        // ## Pagination elements
+        try {
+            let result_page_links = document.getElementById('id_search_results_pagination_relevant_docs').querySelectorAll('.page-link');
+            result_page_links.forEach((result_page_link) => {
+                let request_link = result_page_link.getAttribute('href')
+                if (request_link !== '#') {
+                    result_page_link.addEventListener('click', function (event) {
+                        // # Block default behaviour
+                        event.preventDefault();
+                        // # Retrieve required page
+                        change_related_results_page(result_page_link);
+                    });
+                }
+            });
+        } catch (error) {
+            console.log('No pagination found in relevant docs container, skipping.');
+        }
+    }
+
+
+    function change_related_results_page(request_url) {
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // Update the HTML
+                document.getElementById('id_relevant_docs_container').innerHTML = response_doc.getElementById('id_search_results_container_relevant_docs').innerHTML;
+                // # Add listeners
+                post_process_search_related_page();
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${request_url}`)
+            }
+            // # Hide loading icon
+            document.getElementById('id_search_related_spinner').hidden = true;
+            // # Restore results opacity
+            document.getElementById('id_relevant_docs_container').style.opacity = '1.0';
+        };
+        xhr.send();
+        // # Display loading icon
+        document.getElementById('id_search_related_spinner').hidden = false;
+        // # Make current results opaque
+        document.getElementById('id_relevant_docs_container').style.opacity = '0.33';
+    }
+
+
+    function open_details(ticket_details_url) {
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", ticket_details_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // Update the HTML
+                document.getElementById('id_details_container').innerHTML = response_doc.getElementById('id_details_container').innerHTML;
+                // Post-process feedback
+                post_process_search_feedback();
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${ticket_details_url}`)
+            }
+            // # Hide loading icon
+            // document.getElementById('id_search_spinner').hidden = true;  // TODO
+            // # Restore results opacity
+            document.getElementById('id_details_container').style.opacity = '1.0';
+            // # Show details panel
+            document.getElementById('id_details_nav_col').hidden = false;
+            document.getElementById('id_details_panel').hidden = false;
+        };
+        xhr.send();
+        // # Display loading icon
+        // document.getElementById('id_details_spinner').hidden = false;  // TODO
+        // # Make current results opaque
+        document.getElementById('id_details_container').style.opacity = '0.33';
+    }
+
+    function clear_details() {
+        // # Clear container
+        document.getElementById('id_details_container').innerHTML = null;
+        // # Hide details panel
+        document.getElementById('id_details_nav_col').hidden = true;
+        document.getElementById('id_details_panel').hidden = true;
+    }
+
+
+    function open_analysis(ticket_id, data_set_id) {
+        // # Disable send button until welcome message is received
+        document.getElementById('id_message_button').disabled = true;
+        // # Open connection for chatting
+        chat_socket = new WebSocket(
+            `ws://${window.location.host}/analysis/${data_set_id}/${ticket_id}`
+        );
+        chat_socket.onopen = function (event) {
+            console.log("Socket connection setup successful.");
+        };
+        chat_socket.onclose = function (event) {
+            console.log("Socket connection closed");
+        };
+        // ## Send/Receive message
+        chat_socket.onmessage = function (event) {
+            // # Read message data
+            let data = JSON.parse(event.data);
+            // # Parse message HTML in response
+            let parser = new DOMParser();
+            let message_doc = parser.parseFromString(data.html_response, 'text/html');
+            // # Create new element to be added to the chat
+            let message = message_doc.getElementById('id_message_container').firstElementChild;
+            // # Append message
+            document.getElementById("id_contextual_chat_container").appendChild(message);
+            // # Scroll to bottom of chat
+            let chat_card = document.getElementById("id_analysis_chat_card");
+            chat_card.scrollTop = chat_card.scrollHeight;
+            // # Restore message button (if required)
+            if (!data.is_user) {
+                document.getElementById('chat_loading_icon').hidden = true;
+                document.getElementById('id_chat_spinner').hidden = true;
+                document.getElementById('id_message_button').disabled = false;
+                document.getElementById('id_summary_button').disabled = summary_asked;
+                document.getElementById('id_problem_button').disabled = problem_asked;
+                document.getElementById('id_solved_button').disabled = solved_asked;
+            }
+        };
+        // # Show analysis panel
+        document.getElementById('id_analysis_nav_col').hidden = false;
+        document.getElementById('id_analysis_panel').hidden = false;
+    }
+
+
+    function clear_analysis() {
+        // # Close connection
+        if (chat_socket) {
+            chat_socket.close()
+            chat_socket = null
+        }
+        // # Clear chat
+        document.getElementById('id_contextual_chat_container').innerHTML = null;
+        // # Clear relevant docs
+        document.getElementById('id_relevant_docs_container').innerHTML = null;
+        // # Clear relevant doc details
+        document.getElementById('id_relevant_docs_details_container').innerHTML = null;
+        // # Select back chat
+        document.getElementById('id_contextual_chat_tab_pill').click();
+        // # Clear message input text box
+        document.getElementById('id_message_text_area').values = null;
+        // # Enable send message
+        document.getElementById('id_message_button').disabled = false;
+        // # Enable action buttons
+        // ## Summary
+        document.getElementById("id_summary_button").disabled = false;
+        summary_asked = false;
+        // ## Problem
+        document.getElementById("id_problem_button").disabled = false;
+        problem_asked = false;
+        // ## Solution
+        document.getElementById("id_solved_button").disabled = false;
+        solved_asked = false;
+        // # Hide analysis panel
+        document.getElementById('id_analysis_nav_col').hidden = true;
+        document.getElementById('id_analysis_panel').hidden = true;
+        // # Hide loading icon
+        document.getElementById('chat_loading_icon').hidden = true;
+        document.getElementById('id_chat_spinner').hidden = true;
+    }
+
+
+    function open_related_details(request_url) {
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // Update ID
+                response_doc.getElementById('id_ticket_details').id = 'id_relevant_ticket_details';
+                // Update the HTML
+                document.getElementById('id_relevant_docs_details_container').innerHTML = response_doc.getElementById('id_details_container').innerHTML;
+                // Post process feedback
+                post_process_search_related_feedback();
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${request_url}`);
+            }
+            // # Hide loading icon
+            document.getElementById('id_detail_related_spinner').hidden = true;
+        };
+        xhr.send();
+        // # Display loading icon
+        document.getElementById('id_detail_related_spinner').hidden = false;
+    }
+
+
+    function clear_related_details() {
+        // # Hide related chat details button
+        document.getElementById('id_relevant_docs_details_tab_pill').hidden = true;
+        // # Remove related chat details
+        document.getElementById('id_relevant_docs_details_container').innerHTML = null;
+    }
+
+
+    function post_process_search_feedback() {
+        //
+        let previous_feedback = document.getElementById('id_feedback_field').dataset.previousFeedback;
+        if (previous_feedback === '1') {
+            document.getElementById('feedback_positive').classList.toggle('btn-feedback--active');
+        }
+        else if (previous_feedback === '-1') {
+            document.getElementById('feedback_negative').classList.toggle('btn-feedback--active');
+        }
+        //
+        let positive_feedback_button = document.getElementById('feedback_positive');
+        positive_feedback_button.addEventListener('click', function (event) {
+            // # Block default behaviour
+            event.preventDefault();
+            // # Open analysis
+            send_positive_feedback();
+        });
+        //
+        let negative_feedback_button = document.getElementById('feedback_negative');
+        negative_feedback_button.addEventListener('click', function (event) {
+            // # Block default behaviour
+            event.preventDefault();
+            // # Open analysis
+            send_negative_feedback();
+        });
+    }
+
+
+    function post_process_search_related_feedback() {
+        //
+        let previous_feedback = document.getElementById('id_feedback_field_relevant_docs').dataset.previousFeedback;
+        if (previous_feedback === '1') {
+            document.getElementById('feedback_positive_relevant_docs').classList.toggle('btn-feedback--active');
+        }
+        else if (previous_feedback === '-1') {
+            document.getElementById('feedback_negative_relevant_docs').classList.toggle('btn-feedback--active');
+        }
+        //
+        let positive_feedback_button = document.getElementById('feedback_positive_relevant_docs');
+        positive_feedback_button.addEventListener('click', function (event) {
+            // # Block default behaviour
+            event.preventDefault();
+            // # Open analysis
+            send_positive_feedback('_relevant_docs');
+        });
+        //
+        let negative_feedback_button = document.getElementById('feedback_negative_relevant_docs');
+        negative_feedback_button.addEventListener('click', function (event) {
+            // # Block default behaviour
+            event.preventDefault();
+            // # Open analysis
+            send_negative_feedback('_relevant_docs');
+        });
+    }
+
+
+    function send_positive_feedback(feedback_id_suffix = '') {
+        // # Get form
+        let feedback_form = document.getElementById(`id_positive_feedback_form${feedback_id_suffix}`);
+        // Read form and target URL
+        let form_data = new FormData(feedback_form);
+        let form_url = new URLSearchParams(form_data);
+        // Compose request URL
+        let request_url = feedback_form.action + '?' + form_url.toString();
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 204) {
+                // Toggle button
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).classList.remove('btn-feedback--active');
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).classList.toggle('btn-feedback--active');
+                // Restore buttons
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = false;
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = false;
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 204) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using POST at ${request_url}`);
+                // Enable buttons in the meanwhile
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = false;
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = false;
+            }
+        };
+        xhr.send(form_data);
+        // Disable buttons in the meanwhile
+        document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = true;
+        document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = true;
+    }
+
+
+    function send_negative_feedback(feedback_id_suffix = '') {
+        // # Get form
+        let feedback_form = document.getElementById(`id_negative_feedback_form${feedback_id_suffix}`);
+        // Read form and target URL
+        let form_data = new FormData(feedback_form);
+        let form_url = new URLSearchParams(form_data);
+        // Compose request URL
+        let request_url = feedback_form.action + '?' + form_url.toString();
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 204) {
+                // Toggle button
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).classList.remove('btn-feedback--active');
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).classList.toggle('btn-feedback--active');
+                // Restore buttons
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = false;
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = false;
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 204) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using POST at ${request_url}`);
+                // Enable buttons in the meanwhile
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = false;
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = false;
+            }
+        };
+        xhr.send(form_data);
+        // Disable buttons in the meanwhile
+        document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = true;
+        document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = true;
+    }
+</script>
+{% endblock %}

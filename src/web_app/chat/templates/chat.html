@@ -1,0 +1,1013 @@
+{% extends 'main.html' %}
+
+{% block title %}Chat{% endblock %}
+
+{% block style %}
+<style>
+    html,
+    body {
+        height: 100%;
+        margin: 0;
+    }
+    .card-chat-container {
+        position: relative;
+    }
+    .btn-feedback {
+        transition: all 0.3s;
+    }
+    .btn-feedback:hover {
+        color: white !important;
+    }
+    .btn-feedback--active {
+        color: white !important;
+    }
+</style>
+{% endblock %}
+
+{% block menu %}
+{{ block.super }}
+<div class="modal fade" id="id_settings_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Chat settings</span>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="id_settings_form">
+                <div class="modal-body" id="id_settings_modal_body">
+                    {% csrf_token %}
+                    <!-- Search parameters -->
+                    <div class="row row-fill">
+                        {% for field in settings_form %}
+                        <div class="form-group col-md-6">
+                            {{ field.label }}
+                            {{ field }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="id_close_settings_modal" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Close
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="id_submit_settings_modal">
+                        Save changes&nbsp;
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="id_settings_spinner" hidden></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="alert alert-success" role="alert" id="id_eval_alert" hidden>
+  Evaluation completed successfully! Thank you for your help. You can check for other data sets to evaluate.
+</div>
+<div class="container-fluid" style="height: 87.5vh; display: flex; flex-direction: column;">
+    <div class="row row-cols-3" id="id_navigation_row" style="display: flex; flex-direction: row;">
+        <div class="col" style="display: flex; flex-direction: row; flex: 1; justify-content: space-between;" id="id_analysis_nav_col">
+            <button type="button" class="btn btn-primary col" id="id_reset_chat_button" style="max-width: 33%">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-right" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/>
+                </svg>
+                &nbsp;Change chat&nbsp;
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="id_reset_chat_spinner" hidden></span>
+            </button>
+        </div>
+        <div class="col" id="id_suggestions_nav_col">
+            <div class="d-flex align-items-center" style="justify-content: space-between">
+                {% if user.is_authenticated %}
+                <div class="form-check form-switch align-items-center" id="id_eval_switch_form">
+                {% else %}
+                <div class="form-check form-switch align-items-center" id="id_eval_switch_form" hidden>
+                {% endif %}
+                    <input class="form-check-input" type="checkbox" role="switch" id="id_eval_switch"> <!-- checked> -->
+                    <label class="form-check-label" for="id_eval_switch">Evaluation mode</label>
+                </div>
+                <span></span>
+                <div class="spinner-grow text-primary" role="status" id="id_suggestion_spinner" hidden></div>
+            </div>
+        </div>
+        <div class="col" id="id_details_nav_col">
+            <button type="button" class="btn btn-secondary" id="id_close_details_button" hidden>Close</button>
+        </div>
+    </div>
+    <br/>
+    <div class="row row-cols-3" id="id_content_row" style="height: 82.5vh; display: flex; flex-direction: row; flex: 1;">
+        <div class="col" id="id_chat_panel">
+            <div style="height: 82.5vh;">
+                <div style="height: 100%; display:flex; justify-content: space-between; flex-direction: column;">
+                    <div class="card card-body d-grid gap-3" style="height: 100%; overflow-y: auto" id="id-card-messages"> <!-- style="max-height: 82.5vh; overflow-y: scroll; display:flex; justify-content: flex-end; flex-direction: column"> -->
+                        <div id="id_contextual_chat_container">
+                            <!-- Chat... -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col" id="id_suggestions_panel">
+            <div style="height: 82.5vh;">
+                <div style="height: 100%; display:flex; justify-content: space-between; flex-direction: column;">
+                    <div class="card card-body d-grid gap-3 card-chat-container"  id="id-card-suggestions" style="height: 100%; overflow-y: auto"> <!-- style="max-height: 82.5vh; overflow-y: scroll; display:flex; justify-content: flex-end; flex-direction: column"> -->
+                        <div id="id_suggestions_chat_container">
+                            <div class="container" style="height: 100%; align-content: space-between;">
+                                <br/>
+                                <div class="row"> <!-- style="position: -webkit-sticky; position: sticky; top: 0; z-index: 1020; background-color: white"> -->
+                                    <div class="col" id="id_suggestion_info">
+                                        <h4>Suggested responses</h4>
+                                    </div>
+                                    <div class="col" id="id_eval_info" hidden>
+                                        <h4>Evaluate the following responses</h4>
+                                        <ul>
+                                            <li>
+                                               Check all the responses that in you opinion would fit in the chat in the left.
+                                            </li>
+                                            <li>
+                                                Click "Submit" to move to the next example.
+                                            </li>
+                                            <li>
+                                                Un-toggle "Evaluation mode" to get back to the usual chat visualisation.
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <br/>
+                                <!-- Suggestions -->
+                                <div class="row" style="display: flex; height: calc(100% - 44px); align-items: flex-end;">
+                                    <div class="d-grid gap-3" id="id_suggestions_container">
+                                    </div>
+                                </div>
+                                <br/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col" id="id_details_panel" hidden>
+            <div class="card card-body" id="id_details_container" style="height: 82.5vh; overflow-y: hidden">
+                <!-- Reference chat -->
+                Loading ticket details...
+            </div>
+        </div>
+    </div>
+    <br/>
+    <div class="row row-cols-3" style="display: flex; flex-direction: row;">
+        <div class="col" id="id_chat_action_buttons">
+            <div class="d-flex gap-3" id="id_action_buttons" style="justify-content: space-between">
+                <button type="button" class="btn btn-primary col" id="id_back_button" style="max-width: 33%">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/>
+                    </svg>
+                    &nbsp;Back&nbsp;
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="id_back_spinner" hidden></span>
+                </button>
+                <button type="button" class="btn btn-primary col" id="id_forward_button" style="max-width: 33%">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/>
+                    </svg>
+                    &nbsp;Forward&nbsp;
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="id_forward_spinner" hidden></span>
+                </button>
+            </div>
+        </div>
+        <div class="col">
+            <div class="d-flex flex-row-reverse align-items-center">
+                <button type="button" class="btn btn-primary col" id="id_submit_button" style="max-width: 33%" hidden disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16">
+                        <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                    </svg>
+                    &nbsp;Submit&nbsp;
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="id_submit_spinner" hidden></span>
+                </button>
+                <button type="button" class="btn btn-primary col" id="id_regenerate_button" style="max-width: 33%">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16">
+                        <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
+                        <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/>
+                    </svg>
+                    &nbsp;Regenerate&nbsp;
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" id="id_regenerate_spinner" hidden></span>
+                </button>
+                <!-- <div class="spinner-grow text-primary" role="status" id="id_suggestion_spinner" hidden></div> -->
+            </div>
+        </div>
+        <div class="col">
+            <!-- Empty -->
+        </div>
+    </div>
+    <br/>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let data_set_id = null;
+    let dialogue_id = null;
+    let utterance_idx = null;
+    // # Event listeners
+    document.addEventListener('DOMContentLoaded', function () {
+        // # Reset button
+        document.getElementById('id_chat_navigation').classList.add('active');
+        // # Forms
+        // ## Settings
+        let settings_form = document.getElementById('id_settings_form');
+        settings_form.addEventListener(
+            'submit',
+            function (event) {
+                // # Block default behaviour
+                event.preventDefault();
+                // # Forward request and get updated values
+                update_settings();
+            }
+        );
+        let settings_form_data = new FormData(settings_form);
+        data_set_id = settings_form_data.get('data_set_id');
+
+        // # Navigation buttons
+        // ## Reset chat
+        let reset_chat_button = document.getElementById('id_reset_chat_button');
+        reset_chat_button.addEventListener(
+            'click',
+            function (event) {
+                // # Clear chat
+                init_random_chat();
+            }
+        );
+        // ## Close details
+        let close_details_button = document.getElementById('id_close_details_button');
+        close_details_button.addEventListener(
+            'click',
+            function (event) {
+                // # Clear details
+                clear_details();
+            }
+        );
+
+        // # Chat
+        let back_message_button = document.getElementById('id_back_button');
+        let new_message_button = document.getElementById('id_regenerate_button');
+        let forward_message_button = document.getElementById('id_forward_button');
+        // ## Go backward one message
+        back_message_button.addEventListener(
+            'click',
+            function (event) {
+                // # Rewind chat
+                rewind_chat();
+            }
+        );
+        // ## Generate alternative button
+        new_message_button.addEventListener(
+            'click',
+            function (event) {
+                // # Generate alternative response
+                generate_alternative();
+            }
+        )
+        // ## Send message button pressed
+        forward_message_button.addEventListener(
+            'click',
+            function (event) {
+                // # Advance chat
+                advance_chat();
+            }
+        );
+
+        // # Evaluation
+        let eval_switch = document.getElementById('id_eval_switch');
+        eval_switch.addEventListener('change', function() {
+            if (this.checked) {
+                open_evaluation();
+            } else {
+                close_evaluation();
+            }
+        });
+        // ## Submit evaluation
+        let submit_eval_button = document.getElementById('id_submit_button');
+        submit_eval_button.addEventListener(
+            'click',
+            function (event) {
+                // # Clear chat
+                submit_feedback();
+            }
+        );
+
+        init_random_chat();
+    })
+
+
+    // # Functions
+    function init_random_chat() {
+        // # Hide details panel
+        document.getElementById('id_close_details_button').click();
+        // # Clear chat
+        document.getElementById('id_contextual_chat_container').innerHTML = null;
+        // # Clear message suggestions
+        document.getElementById('id_suggestions_container').innerHTML = null;
+        // # Pick random chat
+        let request_url = null;
+        if (data_set_id === 'natcs') {
+            request_url = "{% url 'random_natcs' %}";
+        } else if (data_set_id === 'tweet_summ') {
+            request_url = "{% url 'random_tweet_summ' %}";
+        } else if (data_set_id === 'tsccv2') {
+            request_url = "{% url 'random_tsccv2' %}";
+        }
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // Hide chat messages
+                let chat_content = response_doc.getElementById('id_utterances_container');
+                for (let i = 0; i < chat_content.children.length; i++) {
+                    chat_content.children[i].hidden = true;
+                }
+                // # Update the HTML
+                document.getElementById('id_contextual_chat_container').innerHTML = response_doc.getElementById('id_details_container').innerHTML;
+                // # Update global variables
+                dialogue_id = document.getElementById('id_ticket_details').dataset.id;
+                utterance_idx = 0;
+                // # Add listeners
+                try {
+                    let references = document.getElementById('id_suggestions_container').querySelectorAll('.doc-reference');
+                    references.forEach((reference) => {
+                        // # Check flag for listeners
+                        if (reference.dataset.listened !== 'true') {
+                            // # Add listener
+                            reference.addEventListener('click', function (event) {
+                                // # Block default behaviour
+                                event.preventDefault();
+                                // # Retrieve ticket details
+                                open_details(reference.getAttribute('href'))
+                            });
+                            // # Add flag for listener
+                            reference.dataset.listened = 'true';
+                        }
+                    });
+                } catch (error) {
+                    console.log('No references found in chat, skipping.');
+                }
+                // # Hide loading icon
+                document.getElementById('id_reset_chat_spinner').hidden = true;
+                // # Enable reset button
+                document.getElementById('id_reset_chat_button').disabled = false;
+                // # Enable forward button
+                document.getElementById('id_forward_button').disabled = false;
+
+                document.getElementById('id_eval_switch').disabled = false;
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${request_url}`)
+                // Retry
+                init_random_chat();
+            }
+        };
+        xhr.send();
+        // # Hide loading icon
+        document.getElementById('id_reset_chat_spinner').hidden = false;
+        // # Disable reset button
+        document.getElementById('id_reset_chat_button').disabled = true;
+        // # Hide loading icons
+        document.getElementById('id_back_spinner').hidden = true;
+        document.getElementById('id_regenerate_spinner').hidden = true;
+        document.getElementById('id_forward_spinner').hidden = true;
+        document.getElementById('id_suggestion_spinner').hidden = true;
+        // # Disable navigation buttons
+        document.getElementById('id_back_button').disabled = true;
+        document.getElementById('id_regenerate_button').disabled = true;
+        document.getElementById('id_forward_button').disabled = true;
+
+        document.getElementById('id_eval_switch').disabled = true;
+    }
+
+
+    function advance_chat() {
+        // # Display loading icon
+        document.getElementById('id_forward_spinner').hidden = false;
+        // # Disable buttons until response arrives
+        document.getElementById('id_back_button').disabled = true;
+        document.getElementById('id_regenerate_button').disabled = true;
+        document.getElementById('id_forward_button').disabled = true;
+        // # Get message containers
+        let chat_content = document.getElementById('id_utterances_container');
+        let suggestions = document.getElementById('id_suggestions_container');
+        let scrollable = null;
+        // # Check latest speaker and make message transparent if necessary
+        if (utterance_idx > 0 && check_speaker(utterance_idx - 1)) {
+            suggestions.children[utterance_idx - 1].style.opacity = 0.33;
+        }
+        // # Advance chat
+        while (utterance_idx < chat_content.children.length && !check_speaker(utterance_idx)) {
+            // # Display latest message
+            chat_content.children[utterance_idx].hidden = false;
+            // # Add fake suggestion (if necessary)
+            if (utterance_idx >= suggestions.children.length) {
+                suggestions.appendChild(document.createElement('div'));
+                suggestions.children[utterance_idx].style.display = "none";
+            }
+            // # Auto-scroll
+            scrollable = document.getElementById("id-card-messages");
+            scrollable.scrollTop = scrollable.scrollHeight;
+            // # Advance index
+            utterance_idx++;
+        }
+        if (utterance_idx < chat_content.children.length) {
+            // # Check whether to generate a suggestion
+            if (utterance_idx >= suggestions.children.length) {
+                get_suggestion(utterance_idx);
+            } else {
+                // # Show suggestion associated with the current index
+                suggestions.children[utterance_idx].hidden = false;
+                suggestions.children[utterance_idx].style.opacity = 1.0;
+                // # Display original response
+                chat_content.children[utterance_idx].hidden = false;
+                // # Advance index
+                utterance_idx++;
+                // # Hide loading icon
+                document.getElementById('id_forward_spinner').hidden = true;
+                // # Enable buttons
+                document.getElementById('id_back_button').disabled = false;
+                document.getElementById('id_regenerate_button').disabled = false;
+                if (utterance_idx < document.getElementById('id_utterances_container').children.length) {
+                    document.getElementById('id_forward_button').disabled = false;
+                }
+            }
+            // # Auto-scroll
+            scrollable = document.getElementById("id-card-messages");
+            scrollable.scrollTop = scrollable.scrollHeight;
+            scrollable = document.getElementById("id-card-suggestions");
+            scrollable.scrollTop = scrollable.scrollHeight;
+        } else {
+            // # Hide loading icon
+            document.getElementById('id_forward_spinner').hidden = true;
+            // # Enable buttons
+            document.getElementById('id_back_button').disabled = false;
+            if (check_speaker(utterance_idx)) {
+                document.getElementById('id_regenerate_button').disabled = false;
+            }
+        }
+    }
+
+
+    function generate_alternative() {
+        // # Display loading icon
+        document.getElementById('id_regenerate_spinner').hidden = false;
+        // # Disable buttons until response arrives
+        document.getElementById('id_back_button').disabled = true;
+        document.getElementById('id_regenerate_button').disabled = true;
+        document.getElementById('id_forward_button').disabled = true;
+        // # Generate alternative to previous message
+        get_suggestion(utterance_idx - 1);
+    }
+
+
+    function rewind_chat() {
+        // # Display loading icon
+        document.getElementById('id_back_spinner').hidden = false;
+        // # Disable buttons until response arrives
+        document.getElementById('id_back_button').disabled = true;
+        document.getElementById('id_regenerate_button').disabled = true;
+        document.getElementById('id_forward_button').disabled = true;
+        // # Get message containers
+        let chat_content = document.getElementById('id_utterances_container');
+        let suggestions = document.getElementById('id_suggestions_container');
+        let scrollable = null;
+        // # Rewind chat
+        if (utterance_idx < chat_content.children.length && check_speaker(utterance_idx)){
+            // # Hide suggestion associated with the current index
+            suggestions.children[utterance_idx].hidden = true;
+        }
+        utterance_idx--;
+        if (check_speaker(utterance_idx)) {
+            // # Hide suggestion associated with the current index
+            suggestions.children[utterance_idx].hidden = true;
+            // # Hide original response
+            chat_content.children[utterance_idx].hidden = true;
+            // # Rewind chat
+            utterance_idx--;
+        }
+        // # Iteratively hide user messages
+        while (utterance_idx > 0 && !check_speaker(utterance_idx)) {
+            // # Hide suggestion associated with the current index
+            suggestions.children[utterance_idx].hidden = true;
+            // # Hide original response
+            chat_content.children[utterance_idx].hidden = true;
+            // # Rewind chat
+            utterance_idx--;
+        }
+        if (check_speaker(utterance_idx)) {
+            suggestions.children[utterance_idx].style.opacity = 1.0;
+        } else {
+            chat_content.children[utterance_idx].hidden = true;
+            utterance_idx--;
+        }
+        utterance_idx++
+        // # Auto-scroll
+        scrollable = document.getElementById("id-card-messages");
+        scrollable.scrollTop = scrollable.scrollHeight;
+        scrollable = document.getElementById("id-card-suggestions");
+        scrollable.scrollTop = scrollable.scrollHeight;
+        // # Hide loading icon
+        document.getElementById('id_back_spinner').hidden = true;
+        // # Enable buttons
+        if (utterance_idx > 0) {
+            document.getElementById('id_back_button').disabled = false;
+            if (check_speaker(utterance_idx - 1)) {
+                document.getElementById('id_regenerate_button').disabled = false;
+            }
+        }
+        document.getElementById('id_forward_button').disabled = false;
+    }
+
+
+    function get_suggestion(utterance_idx) {
+        // # Prepare URL
+        let request_url = null;
+        if (data_set_id === 'natcs') {
+            request_url = "{% url 'suggestion_natcs' 'dialogue_id_placeholder' 'utterance_idx_placeholder' %}";
+        } else if (data_set_id === 'tweet_summ') {
+            request_url = "{% url 'suggestion_tweet_summ' 'dialogue_id_placeholder' 'utterance_idx_placeholder' %}";
+        } else if (data_set_id === 'tsccv2') {
+            request_url = "{% url 'suggestion_tsccv2' 'dialogue_id_placeholder' 'utterance_idx_placeholder' %}";
+        }
+        request_url = request_url.replace('dialogue_id_placeholder', dialogue_id);
+        request_url = request_url.replace('utterance_idx_placeholder', utterance_idx);
+        // #
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // Update the HTML
+                let suggestions = document.getElementById('id_suggestions_container');
+                if (utterance_idx < suggestions.children.length) {
+                    suggestions.children[utterance_idx] = response_doc.getElementById(`id_message_suggestion_${dialogue_id}_${utterance_idx}`);
+                } else {
+                    suggestions.appendChild(response_doc.getElementById(`id_message_suggestion_${dialogue_id}_${utterance_idx}`));
+                }
+                //
+                post_process_suggestion_feedback(`_${dialogue_id}_${utterance_idx}`);
+                //
+                let scrollable = document.getElementById("id-card-suggestions");
+                scrollable.scrollTop = scrollable.scrollHeight;
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${request_url}`)
+            }
+            // # Hide loading icon
+            document.getElementById('id_suggestion_spinner').hidden = true;
+            // # Hide loading icons
+            document.getElementById('id_forward_spinner').hidden = true;
+            document.getElementById('id_regenerate_spinner').hidden = true;
+            document.getElementById('id_back_spinner').hidden = true;
+            // # Enable buttons
+            document.getElementById('id_back_button').disabled = false;
+            document.getElementById('id_regenerate_button').disabled = false;
+            if (utterance_idx < document.getElementById('id_utterances_container').children.length) {
+                document.getElementById('id_forward_button').disabled = false;
+            }
+            document.getElementById('id_eval_switch').disabled = false;
+        };
+        xhr.send();
+        // # Display loading icon
+        document.getElementById('id_suggestion_spinner').hidden = false;
+        document.getElementById('id_eval_switch').disabled = true;
+    }
+
+    function update_settings() {
+        // # Get form
+        let settings_form = document.getElementById('id_settings_form');
+        // Read form and target URL
+        let form_data = new FormData(settings_form);
+        let form_url = new URLSearchParams(form_data);
+        // Compose request URL
+        let request_url = settings_form.action + '?' + form_url.toString();
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // Update the HTML
+                document.getElementById('id_settings_modal').innerHTML = response_doc.getElementById('id_settings_modal').innerHTML;
+                // # Add form submission observer
+                document.getElementById('id_settings_form').addEventListener(
+                    'submit',
+                    function (event) {
+                        // # Block default behaviour
+                        event.preventDefault();
+                        // # Forward request and get updated values
+                        update_settings();
+                    }
+                );
+                // # Update data set ID
+                let old_data_set_id = data_set_id;
+                let settings_form_data = new FormData(settings_form);
+                data_set_id = settings_form_data.get('data_set_id');
+                // # Check whether there was an open search to re-run
+                if (data_set_id !== old_data_set_id) {
+                    init_random_chat();
+                }
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using POST at ${request_url}`)
+            }
+            // # Hide loading icon
+            document.getElementById('id_settings_spinner').hidden = true;
+            // # Enable submission and close buttons
+            document.getElementById('id_close_settings_modal').disabled = false;
+            document.getElementById('id_submit_settings_modal').disabled = false;
+            // # Close form
+            document.getElementById('id_close_settings_modal').click();
+        };
+        xhr.send(form_data);
+        // # Display loading icon
+        document.getElementById('id_settings_spinner').hidden = false;
+        // # Disable submission and close buttons
+        document.getElementById('id_close_settings_modal').disabled = true;
+        document.getElementById('id_submit_settings_modal').disabled = true;
+    }
+
+
+    function check_speaker(utterance_idx) {
+        let speaker_element = document.getElementById(`id_speaker_${dialogue_id}_${utterance_idx}`);
+        if (speaker_element === null) {
+            return false;
+        }
+        let speaker = speaker_element.textContent.trim();
+        return (
+            (data_set_id === 'natcs' && speaker === 'Agent') ||
+            (data_set_id === 'tweet_summ' && !speaker.startsWith('Customer')) ||
+            (data_set_id === 'tsccv2' && speaker === 'Teacher')
+        );
+    }
+
+
+    function open_details(ticket_details_url) {
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", ticket_details_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // Update the HTML
+                document.getElementById('id_details_container').innerHTML = response_doc.getElementById('id_details_container').innerHTML;
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${ticket_details_url}`)
+            }
+            // # Hide loading icon
+            // document.getElementById('id_search_spinner').hidden = true;  // TODO
+            // # Restore results opacity
+            document.getElementById('id_details_container').style.opacity = '1.0';
+            // # Show details panel
+            document.getElementById('id_close_details_button').hidden = false;
+            document.getElementById('id_close_details_button').disabled = false;
+            document.getElementById('id_details_panel').hidden = false;
+        };
+        xhr.send();
+        // # Display loading icon
+        // document.getElementById('id_details_spinner').hidden = false;  // TODO
+        // # Make current results opaque
+        document.getElementById('id_details_container').style.opacity = '0.33';
+    }
+
+
+    function clear_details() {
+        // # Clear container
+        document.getElementById('id_details_container').innerHTML = null;
+        // # Hide details panel
+        document.getElementById('id_close_details_button').hidden = true;
+        document.getElementById('id_close_details_button').disabled = true;
+        document.getElementById('id_details_panel').hidden = true;
+    }
+
+
+    function post_process_suggestion_feedback(feedback_id_suffix) {
+        //
+        let positive_feedback_button = document.getElementById(`feedback_positive${feedback_id_suffix}`);
+        positive_feedback_button.addEventListener('click', function (event) {
+            // # Block default behaviour
+            event.preventDefault();
+            // # Open analysis
+            send_positive_feedback(feedback_id_suffix);
+        });
+        //
+        let negative_feedback_button = document.getElementById(`feedback_negative${feedback_id_suffix}`);
+        negative_feedback_button.addEventListener('click', function (event) {
+            // # Block default behaviour
+            event.preventDefault();
+            // # Open analysis
+            send_negative_feedback(feedback_id_suffix);
+        });
+    }
+
+
+    function send_positive_feedback(feedback_id_suffix) {
+        // # Get form
+        let feedback_form = document.getElementById(`id_positive_feedback_form${feedback_id_suffix}`);
+        // Read form and target URL
+        let form_data = new FormData(feedback_form);
+        let form_url = new URLSearchParams(form_data);
+        // Compose request URL
+        let request_url = feedback_form.action + '?' + form_url.toString();
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 204) {
+                // Toggle button
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).classList.remove('btn-feedback--active');
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).classList.toggle('btn-feedback--active');
+                // Restore buttons
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = false;
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = false;
+                document.getElementById('id_eval_switch').disabled = false;
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 204) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using POST at ${request_url}`);
+                // Enable buttons in the meanwhile
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = false;
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = false;
+                document.getElementById('id_eval_switch').disabled = false;
+            }
+        };
+        xhr.send(form_data);
+        // Disable buttons in the meanwhile
+        document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = true;
+        document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = true;
+        document.getElementById('id_eval_switch').disabled = true;
+    }
+
+
+    function send_negative_feedback(feedback_id_suffix) {
+        // # Get form
+        let feedback_form = document.getElementById(`id_negative_feedback_form${feedback_id_suffix}`);
+        // Read form and target URL
+        let form_data = new FormData(feedback_form);
+        let form_url = new URLSearchParams(form_data);
+        // Compose request URL
+        let request_url = feedback_form.action + '?' + form_url.toString();
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 204) {
+                // Toggle button
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).classList.remove('btn-feedback--active');
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).classList.toggle('btn-feedback--active');
+                // Restore buttons
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = false;
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = false;
+                document.getElementById('id_eval_switch').disabled = false;
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 204) {
+                // Handle error
+                console.log(`Waiting request completion`)
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using POST at ${request_url}`);
+                // Enable buttons in the meanwhile
+                document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = false;
+                document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = false;
+                document.getElementById('id_eval_switch').disabled = false;
+            }
+        };
+        xhr.send(form_data);
+        // Disable buttons in the meanwhile
+        document.getElementById(`feedback_positive${feedback_id_suffix}`).disabled = true;
+        document.getElementById(`feedback_negative${feedback_id_suffix}`).disabled = true;
+        document.getElementById('id_eval_switch').disabled = true;
+    }
+
+
+    function open_evaluation() {
+        // Clear everything
+        document.getElementById('id_close_details_button').click();
+        // Disable nav buttons
+        document.getElementById('id_reset_chat_button').disabled = true;
+        document.getElementById('id_back_button').disabled = true;
+        document.getElementById('id_regenerate_button').disabled = true;
+        document.getElementById('id_forward_button').disabled = true;
+        // Hide nav buttons
+        document.getElementById('id_reset_chat_button').hidden = true;
+        document.getElementById('id_back_button').hidden = true;
+        document.getElementById('id_regenerate_button').hidden = true;
+        document.getElementById('id_forward_button').hidden = true;
+        // Hide suggestions info
+        document.getElementById('id_suggestion_info').hidden = true;
+        // Show eval info
+        document.getElementById('id_eval_info').hidden = false;
+        // Show eval button
+        document.getElementById('id_submit_button').disabled = true;
+        document.getElementById('id_submit_spinner').hidden = false;
+        document.getElementById('id_submit_button').hidden = false;
+        // Ask for eval sample
+        get_eval_sample();
+    }
+
+
+    function close_evaluation() {
+        // Hide completion alert
+        document.getElementById('id_eval_alert').hidden = true;
+        // Hide eval button
+        document.getElementById('id_submit_button').disabled = true;
+        document.getElementById('id_submit_spinner').hidden = true;
+        document.getElementById('id_submit_button').hidden = true;
+        // Hide eval info
+        document.getElementById('id_eval_info').hidden = true;
+        // Show suggestions info
+        document.getElementById('id_suggestion_info').hidden = false;
+        // Show nav buttons
+        document.getElementById('id_reset_chat_button').hidden = false;
+        document.getElementById('id_back_button').hidden = false;
+        document.getElementById('id_regenerate_button').hidden = false;
+        document.getElementById('id_forward_button').hidden = false;
+        // Enable buttons
+        document.getElementById('id_reset_chat_button').disabled = false;
+        document.getElementById('id_back_button').disabled = false;
+        document.getElementById('id_regenerate_button').disabled = false;
+        document.getElementById('id_forward_button').disabled = false;
+        // Ask for a new chat
+        init_random_chat();
+    }
+
+
+    function get_eval_sample() {
+        // # Clear chat
+        document.getElementById('id_contextual_chat_container').innerHTML = null;
+        // # Clear message suggestions
+        document.getElementById('id_suggestions_container').innerHTML = null;
+        // # Pick next eval chat
+        let request_url = null;
+        if (data_set_id === 'natcs') {
+            request_url = "{% url 'example_natcs' %}";
+        } else if (data_set_id === 'tweet_summ') {
+            request_url = "{% url 'example_tweet_summ' %}";
+        } else if (data_set_id === 'tsccv2') {
+            request_url = "{% url 'example_tsccv2' %}";
+        }
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                // Unpack and parse the response
+                let response = xhr.responseText;
+                let parser = new DOMParser();
+                let response_doc = parser.parseFromString(response, 'text/html');
+                // # Update the HTML
+                document.getElementById('id_contextual_chat_container').innerHTML = response_doc.getElementById('id_details_container').innerHTML;
+                document.getElementById('id_suggestions_container').innerHTML = response_doc.getElementById('id_eval_messages_container').innerHTML;
+                post_process_eval_feedback();
+                // # Hide loading icon
+                document.getElementById('id_submit_spinner').hidden = true;
+                // # Enable submit button
+                document.getElementById('id_submit_button').disabled = false;
+
+                document.getElementById('id_eval_switch').disabled = false;
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 200) {
+                // Handle error
+                console.log(`Waiting request completion`);
+            } else if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 204) {
+                // # Hide loading icon
+                document.getElementById('id_submit_spinner').hidden = true;
+                //
+                document.getElementById('id_eval_switch').disabled = false;
+
+                document.getElementById('id_eval_alert').hidden = false;
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 204) {
+                // Handle error
+                console.log(`Waiting request completion`);
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using GET at ${request_url}`)
+                // Return to previous settings
+                // TODO fixme
+                // close_evaluation();
+            }
+        };
+        xhr.send();
+
+        document.getElementById('id_eval_switch').disabled = true;
+    }
+
+
+    function post_process_eval_feedback() {
+        // Iterate over samples
+        let samples = document.getElementById('id_suggestions_container').querySelectorAll('.eval-feedback');
+        samples.forEach((sample) => {
+            // # Take utterance id
+            let utterance_id = sample.dataset.utteranceId;
+            // # Add listeners to buttons
+            // # # Positive feedback button
+            let positive_feedback_button = document.getElementById(`id_eval_feedback_positive_${utterance_id}`);
+            // # Add listener
+            positive_feedback_button.addEventListener('click', function (event) {
+                // # Block default behaviour
+                event.preventDefault();
+                // #
+                positive_eval(utterance_id);
+            });
+            // # # Negative feedback button
+            let negative_feedback_button = document.getElementById(`id_eval_feedback_negative_${utterance_id}`);
+            // # Add listener
+            negative_feedback_button.addEventListener('click', function (event) {
+                // # Block default behaviour
+                event.preventDefault();
+                // #
+                negative_eval(utterance_id);
+            });
+        });
+    }
+
+
+    function positive_eval(utterance_id) {
+        let eval_input = document.getElementById(`id_eval_feedback_${utterance_id}`);
+        if (eval_input.value === '1') {
+            eval_input.value = '0';
+        }
+        else {
+            eval_input.value = '1';
+        }
+        document.getElementById(`id_eval_feedback_negative_${utterance_id}`).classList.remove('btn-feedback--active');
+        document.getElementById(`id_eval_feedback_positive_${utterance_id}`).classList.toggle('btn-feedback--active');
+    }
+
+
+    function negative_eval(utterance_id) {
+        let eval_input = document.getElementById(`id_eval_feedback_${utterance_id}`);
+        if (eval_input.value === '-1') {
+            eval_input.value = '0';
+        }
+        else {
+            eval_input.value = '-1';
+        }
+        document.getElementById(`id_eval_feedback_positive_${utterance_id}`).classList.remove('btn-feedback--active');
+        document.getElementById(`id_eval_feedback_negative_${utterance_id}`).classList.toggle('btn-feedback--active');
+    }
+
+
+    function submit_feedback() {
+        // # Get form
+        let feedback_form = document.getElementById('id_eval_form');
+        // Read form and target URL
+        let form_data = new FormData(feedback_form);
+        let form_url = new URLSearchParams(form_data);
+        // Compose request URL
+        let request_url = feedback_form.action + '?' + form_url.toString();
+        // Fetch results page
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", request_url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 204) {
+                // Get new evaluation sample
+                get_eval_sample();
+            } else if (xhr.readyState !== XMLHttpRequest.DONE && xhr.status === 204) {
+                // Handle error
+                console.log(`Waiting request completion`);
+            } else {
+                // Handle error
+                console.log(`An error occurred while fetching the remote element using POST at ${request_url}`);
+
+                document.getElementById('id_submit_spinner').hidden = true;
+                document.getElementById('id_submit_button').disabled = false;
+            }
+        };
+        xhr.send(form_data);
+        // Hide eval button
+        document.getElementById('id_submit_button').disabled = true;
+        document.getElementById('id_submit_spinner').hidden = false;
+    }
+</script>
+{% endblock %}

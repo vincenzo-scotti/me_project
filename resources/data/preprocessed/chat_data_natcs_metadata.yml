@@ -1,0 +1,80 @@
+# Key are the task categories
+chat:
+  transducer:
+    instructions: "Respond to the following dialogue. Dialogue utterances are in the form \"[speaker]: [text]\", separated by \"---\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted. The dialogue is about an automobile after-sales support, information about the support is prepended to the dialogue."
+    instructions_alternatives:
+      - - "Respond to the following dialogue."
+
+        - "Guess a response to the following dialogue."
+        - "Suggest a response to the following dialogue."
+
+        - "Guess a possible response to the following dialogue."
+        - "Suggest a possible response to the following dialogue."
+
+        - "Guess a response to this dialogue."
+        - "Suggest a response to this dialogue."
+
+        - "Guess a possible response to the following dialogue."
+        - "Suggest a possible response to the following dialogue."
+
+      - - "Dialogue utterances are in the form \"[speaker]: [text]\", separated by \"---\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+        - "The utterances in the dialogue are in the form \"[speaker]: [text]\", separated by \"---\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+
+        - "Dialogue utterances are in the form \"{speaker}: {text}\", separated by \"---\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+        - "The utterances in the dialogue are in the form \"{speaker}: {text}\", separated by \"---\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+
+        - "Dialogue utterances are in the form \"[speaker]: [text]\" and are separated by the symbol \"---\". When present at the beginning of the dialogue, the symbol \"(...)\" indicates that the first part of the dialogue is omitted."
+        - "The utterances in the dialogue are in the form \"[speaker]: [text]\" and are separated by the symbol \"---\". When present at the beginning of the dialogue, the symbol \"(...)\" indicates that the first part of the dialogue is omitted."
+
+        - "Dialogue utterances are in the form \"{speaker}: {text}\" and are separated by the symbol \"---\". When present at the beginning of the dialogue, the symbol \"(...)\" indicates that the first part of the dialogue is omitted."
+        - "The utterances in the dialogue are in the form \"{speaker}: {text}\" and are separated by the symbol \"---\". When present at the beginning of the dialogue, the symbol \"(...)\" indicates that the first part of the dialogue is omitted."
+
+        - "Dialogue utterances are in the form \"[speaker]: [text]\" and are separated by the symbol \"---\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+        - "The utterances in the dialogue are in the form \"[speaker]: [text]\" and are separated by the symbol \"---\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+
+        - "Dialogue utterances are in the form \"{speaker}: {text}\" and are separated by the symbol \"---\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+        - "The utterances in the dialogue are in the form \"{speaker}: {text}\" and are separated by the symbol \"---\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+
+        - "Dialogue utterances are in the form \"[speaker]: [text]\" and are separated by the symbol \"---\". When present at the beginning of the dialogue, the symbol \"(...)\" indicates that the first part of the dialogue is omitted."
+        - "The utterances in the dialogue are in the form \"[speaker]: [text]\" and are separated by the symbol \"---\". When present at the beginning of the dialogue, the symbol \"(...)\" indicates that the first part of the dialogue is omitted."
+
+        - "Dialogue utterances are in the form \"{speaker}: {text}\" and are separated by the symbol \"---\". When present at the beginning of the dialogue, the symbol \"(...)\" indicates that the first part of the dialogue is omitted."
+        - "The utterances in the dialogue are in the form \"{speaker}: {text}\" and are separated by the symbol \"---\". When present at the beginning of the dialogue, the symbol \"(...)\" indicates that the first part of the dialogue is omitted."
+
+        - "Dialogue utterances are in the form \"[speaker]: [text]\", separated by \"---\"."
+        - "The utterances in the dialogue are in the form \"[speaker]: [text]\", separated by \"---\"."
+
+        - "Dialogue utterances are in the form \"{speaker}: {text}\", separated by \"---\"."
+        - "The utterances in the dialogue are in the form \"{speaker}: {text}\", separated by \"---\"."
+
+        - "Dialogue utterances are in the form \"[speaker]: [text]\" and are separated by the symbol \"---\"."
+        - "The utterances in the dialogue are in the form \"[speaker]: [text]\" and are separated by the symbol \"---\"."
+
+        - "Dialogue utterances are in the form \"{speaker}: {text}\" and are separated by the symbol \"---\"."
+        - "The utterances in the dialogue are in the form \"{speaker}: {text}\" and are separated by the symbol \"---\"."
+
+        - ""
+
+      - - "The dialogue is about an automobile after-sales support, information about the support (when available) is prepended to the dialogue."
+        - "The dialogue is about an automobile after-sales support, information about the support (when available) precedes the dialogue."
+
+        - ""
+  causal:
+    instructions: "The following is a dialogue about an automobile after-sales support, information about the support (when available) is prepended to the dialogue by the system. Dialogue utterances are in the form \"[speaker]: [text]\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+    instructions_alternatives:
+      - - "The following is a dialogue about an automobile after-sales support; information about the support (when available) is prepended to the dialogue by the system."
+        - "The following is a dialogue about automobile after-sales support; information about the support (when available) precedes the dialogue."
+
+      - - "Dialogue utterances are in the form \"[speaker]: [text]\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+        - "The utterances in the dialogue are in the form \"[speaker]: [text]\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+
+        - "Dialogue utterances are in the form \"{speaker}: {text}\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+        - "The utterances in the dialogue are in the form \"{speaker}: {text}\". The symbol \"(...)\" at the beginning of the dialogue indicates that the first part of the dialogue is omitted."
+
+        - "Dialogue utterances are in the form \"[speaker]: [text]\"."
+        - "The utterances in the dialogue are in the form \"[speaker]: [text]\"."
+
+        - "Dialogue utterances are in the form \"{speaker}: {text}\"."
+        - "The utterances in the dialogue are in the form \"{speaker}: {text}\"."
+
+        - ""

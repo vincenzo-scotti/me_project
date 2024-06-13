@@ -1,0 +1,43 @@
+# Global
+data_dir_path: &data_dir_path ./resources/data/retrieval/
+services_dir_path: ./services/
+service: retrieval
+log_file: true
+log_level: INFO
+# FLASK application
+flask:  # Passed to the Flask object run method
+  host: 0.0.0.0  # 127.0.0.1
+  # port: 5000
+  threaded: true
+# Retriever
+retriever:
+  transformer_factory:
+    semantic:
+      data_dir_path: *data_dir_path
+      ranking_model: bienc
+      ranking_params:
+        transformer: sentence-transformers-paraphrase-multilingual-mpnet-base-v2
+        # model_path: paraphrase-multilingual-mpnet-base-v2
+        model_path: ./resources/models/pre_trained/sentence-transformers-paraphrase-multilingual-mpnet-base-v2
+        ann: hnswlib
+        tensors: true
+        normalise: true
+        top_k: 1000
+      reranking_model: xenc
+      reranking_params:
+        transformer: amberoad-bert-multilingual-passage-reranking-msmarco
+        # model_path: amberoad/bert-multilingual-passage-reranking-msmarco
+        model_path: ./resources/models/pre_trained/amberoad-bert-multilingual-passage-reranking-msmarco
+        max_length: &semantic_reranker_max_length 512
+        tokenizer_args:
+            max_length: *semantic_reranker_max_length
+      # ranking_cutoff: 1000
+      # reranking_cutoff: 64
+    lexical:
+      data_dir_path: *data_dir_path
+      ranking_model: bm25
+      reranking_model: tf-idf
+      # ranking_cutoff: 1000
+      # reranking_cutoff: 64
+  doc_manager:
+    data_dir_path: *data_dir_path

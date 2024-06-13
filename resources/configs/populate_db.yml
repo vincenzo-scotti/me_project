@@ -1,0 +1,14 @@
+# Corpora
+corpora:
+  tsccv2:
+    args:
+      - ./resources/data/raw/TeacherStudentChatroomCorpus_v2/
+    kwargs:
+      holdout: null
+  natcs:
+    args:
+      - ./resources/data/raw/dstc11-track2-intent-induction-main/
+  tweet_summ:
+    args:
+      - ./resources/data/raw/Customer Support on Twitter/
+      - ./resources/data/raw/Tweetsumm-main/
