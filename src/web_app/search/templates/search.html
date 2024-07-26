@@ -826,7 +826,7 @@
         document.getElementById('id_message_button').disabled = true;
         // # Open connection for chatting
         chat_socket = new WebSocket(
-            `ws://${window.location.host}/analysis/${data_set_id}/${ticket_id}`
+            `ws://${window.location.host}${(window.location.pathname.startsWith('/ME-Demo/')) ? '/ME-Demo' : ''}/analysis/${data_set_id}/${ticket_id}`
         );
         chat_socket.onopen = function (event) {
             console.log("Socket connection setup successful.");

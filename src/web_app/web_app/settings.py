@@ -26,8 +26,8 @@ SECRET_KEY = 'django-insecure-^!bl#@3o%0s1(yoi*b_*6kvnk(*5ml&m3)v)@&^f!tveb4zcp-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['131.175.15.22', 'localhost', '127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['http://131.175.15.22:61111']
 
 # Application definition
 
@@ -130,7 +130,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -146,3 +146,5 @@ CHANNEL_LAYERS = {
 
 # Added to work with Nginx
 FORCE_SCRIPT_NAME = '/ME-Demo'
+STATIC_URL = '/ME-Demo/static/'  # NOTE: previous version was 'static/'
+MEDIA_URL = '/ME-Demo/media/'
