@@ -1,6 +1,6 @@
 # LLM Support for Real-Time Technical Assistance
 
-Codebase for the demo paper [LLM Support for Real-Time Technical Assistance](https://www.overleaf.com/read/vzqjjgqpqkrn#dcae1b).
+Codebase for the demo paper [LLM Support for Real-Time Technical Assistance](https://link.springer.com/chapter/10.1007/978-3-031-70371-3_26).
 The demo web application allows to explore the use of LLM as support tool for technical assistance.
 
 Demonstration video is available at thi [link](https://bit.ly/4aAVFLV)
@@ -623,14 +623,16 @@ If you are willing to use our code, please consider citing our work through the 
 ```bibtex
 
 @inproceedings{scotti-carman-2024-llm,
-	address = {Cham},
+    address = {Cham},
 	author = {Scotti, Vincenzo and Carman, Mark James},
-	booktitle = {Machine Learning and Knowledge Discovery in Databases},
-	editor = {Xxx},
-	isbn = {xxx},
-	pages = {xxx--xxx},
+	booktitle = {Machine Learning and Knowledge Discovery in Databases. Research Track and Demo Track},
+	editor = {Bifet, Albert and Daniu{\v{s}}is, Povilas and Davis, Jesse and Krilavi{\v{c}}ius, Tomas and Kull, Meelis and Ntoutsi, Eirini and Puolam{\"a}ki, Kai and {\v{Z}}liobait{\.{e}}, Indr{\.{e}}},
+	isbn = {978-3-031-70371-3},
+	pages = {388--393},
 	publisher = {Springer Nature Switzerland},
-	title = {{LLM Support for Real-Time Technical Assistance}},
+	title = {LLM Support for Real-Time Technical Assistance},
+    doi = {10.1007/978-3-031-70371-3\_26},
+	url = {https://doi.org/10.1007/978-3-031-70371-3\_26},
 	year = {2024}
 }
 
